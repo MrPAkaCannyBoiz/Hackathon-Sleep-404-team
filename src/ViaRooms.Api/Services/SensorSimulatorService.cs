@@ -13,7 +13,7 @@ public class SensorSimulatorService(
     ILogger<SensorSimulatorService> logger) : BackgroundService
 {
     private readonly int _tickMs = config.GetValue("Simulator:TickIntervalSeconds", 8) * 1000;
-    private readonly int _thresholdMin = config.GetValue("Simulator:AvailabilityThresholdMinutes", 5);
+    private readonly int _thresholdMin = config.GetValue("Simulator:AvailabilityThresholdMinutes", 1);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

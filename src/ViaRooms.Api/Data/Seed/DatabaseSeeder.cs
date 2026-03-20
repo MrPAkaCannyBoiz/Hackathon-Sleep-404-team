@@ -10,6 +10,7 @@ public static class DatabaseSeeder
         var context = services.GetRequiredService<AppDbContext>();
         await context.Database.EnsureCreatedAsync();
 
+        // Check if data already exists to avoid seeding multiple times
         if (await context.Hubs.AnyAsync()) return;
 
         var rng = new Random();
@@ -38,7 +39,7 @@ public static class DatabaseSeeder
                 {
                     rooms.Add(new StudyRoom
                     {
-                        RoomId = $"{hubId}.{floor}.{room:D2}",
+                        RoomId = $"{hubId}0{floor}.{room:D2}",
                         HubId = hubId,
                         FloorNumber = floor,
                         Status = rng.Next(2) == 0 ? RoomStatus.Available : RoomStatus.Occupied,
