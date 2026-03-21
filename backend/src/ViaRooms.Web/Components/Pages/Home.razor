@@ -5,48 +5,270 @@
 @inject IConfiguration Config
 @implements IAsyncDisposable
 
-<h2>Room Availability</h2>
-<p class="last-updated">Last updated: @_lastUpdated.ToLocalTime().ToString("HH:mm:ss")</p>
+<PageTitle>MyVIA</PageTitle>
 
-@if (_rooms is null)
-{
-    <p>Loading...</p>
-}
-else
-{
-    @foreach (var hub in _rooms.GroupBy(r => r.HubId).OrderBy(g => g.Key))
-    {
-        <h3>Hub @hub.Key</h3>
-        @foreach (var floor in hub.GroupBy(r => r.FloorNumber).OrderBy(g => g.Key))
+<section class="hero">
+    <div class="container">
+        <h1>Your Study portal</h1>
+        <p>
+            Here you can find all the room availability information you need for your studies at VIA.
+            Quick and easy.
+        </p>
+
+        <div class="filters">
+            <select @bind="_selectedHub">
+                <option value="All">All hubs</option>
+                @foreach (var hub in HubOptions)
+                {
+                    <option value="@hub">Hub @hub</option>
+                }
+            </select>
+
+            <select @bind="_selectedFloor">
+                <option value="All">All floors</option>
+                @foreach (var floor in FloorOptions)
+                {
+                    <option value="@floor">Floor @floor</option>
+                }
+            </select>
+
+            <select @bind="_selectedStatus">
+                <option value="All">All statuses</option>
+                <option value="Available">Available</option>
+                <option value="Occupied">Occupied</option>
+            </select>
+        </div>
+    </div>
+</section>
+
+<section class="events" id="events">
+    <div class="container">
+        <h2>Events</h2>
+
+        <div class="event-row">
+            <a class="event-card" href="/availability">
+                <img src="/images/event1.jpg" alt="Availability overview" />
+                <span class="tag">Live room overview</span>
+                <p>@OverviewTimestamp</p>
+                <h3>Room availability</h3>
+                <p>VIA | All hubs</p>
+            </a>
+
+            <a class="event-card" href="/map">
+                <img src="/images/event1.jpg" alt="Map view" />
+                <span class="tag">Quick visual search</span>
+                <p>@OverviewTimestamp</p>
+                <h3>Map view</h3>
+                <p>VIA | Hub overview</p>
+            </a>
+
+            <a class="event-card" href="/floor-plan">
+                <img src="/images/event2.jpg" alt="Floor plan" />
+                <span class="tag">Building plans</span>
+                <p>@OverviewTimestamp</p>
+                <h3>Floor plan</h3>
+                <p>VIA | Floors 2 and 3</p>
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="shortcuts" id="shortcuts">
+    <div class="container">
+        <h2>Shortcuts</h2>
+
+        <div class="shortcut-box">
+            @foreach (var shortcut in ShortcutLinks)
+            {
+                <a href="@shortcut.Href">@shortcut.Label</a>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="search" id="search">
+    <div class="container">
+        <h2>Looking for something?</h2>
+
+        <div class="search-bar">
+            <input type="text"
+                   @bind="_searchQuery"
+                   @bind:event="oninput"
+                   placeholder="Try searching!" />
+            <span>Search</span>
+        </div>
+
+        @if (_rooms is null)
         {
-            <h4 class="floor-heading">Floor @floor.Key</h4>
-            <table class="room-table">
-                <thead>
-                    <tr><th>Room</th><th>Status</th><th>Last Activity</th></tr>
-                </thead>
-                <tbody>
-                    @foreach (var room in floor.OrderBy(r => r.RoomId))
-                    {
-                        <tr>
-                            <td>@room.RoomId</td>
-                            <td>
-                                <span class="badge @(room.Status == RoomStatus.Available ? "badge-available" : "badge-occupied")">
-                                    @room.Status
-                                </span>
-                            </td>
-                            <td>@room.LastActivityTime.ToLocalTime().ToString("HH:mm:ss")</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <p class="section-empty">Loading rooms...</p>
         }
-    }
-}
+        else
+        {
+            <div class="news-row home-search-results">
+                @foreach (var room in SearchResults)
+                {
+                    <div class="news-card">
+                        <span>Hub @room.HubId</span>
+                        <span>Floor @room.FloorNumber</span>
+                        <h3>@room.RoomId</h3>
+                        <p>@room.Status at @room.LastActivityTime.ToLocalTime().ToString("HH:mm:ss")</p>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<section class="news" id="news">
+    <div class="container">
+        <div class="news-header">
+            <h2>News</h2>
+            <a href="/availability">See all messages</a>
+        </div>
+
+        @if (_rooms is null)
+        {
+            <p class="section-empty">Loading updates...</p>
+        }
+        else
+        {
+            <div class="news-row">
+                @foreach (var item in NewsCards)
+                {
+                    <div class="news-card">
+                        <span>@item.Source</span>
+                        <span>@item.When</span>
+                        <h3>@item.Title</h3>
+                        <p>@item.Description</p>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<section class="more" id="more">
+    <div class="container">
+        <h2>More from VIA</h2>
+
+        <div class="more-grid">
+            @foreach (var card in MoreCards)
+            {
+                <a class="more-card" href="@card.Href">
+                    <img src="@card.ImagePath" alt="@card.Title" />
+                    <h3>@card.Title</h3>
+                    <p>@card.Description</p>
+                </a>
+            }
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="container footer-links">
+        <a href="/">Cookie policy</a>
+        <a href="/availability">Privacy policy</a>
+        <a href="/map">Web accessibility</a>
+        <a href="/floor-plan">Contact VIA Service</a>
+    </div>
+</footer>
 
 @code {
     private List<StudyRoom>? _rooms;
     private DateTime _lastUpdated = DateTime.UtcNow;
     private HubConnection? _hubConnection;
+    private string _selectedHub = "All";
+    private string _selectedFloor = "All";
+    private string _selectedStatus = "All";
+    private string _searchQuery = string.Empty;
+
+    private IReadOnlyList<string> HubOptions =>
+        (_rooms ?? [])
+            .Select(room => room.HubId)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(hub => hub)
+            .ToList();
+
+    private IReadOnlyList<int> FloorOptions =>
+        (_rooms ?? [])
+            .Select(room => room.FloorNumber)
+            .Distinct()
+            .OrderBy(floor => floor)
+            .ToList();
+
+    private IReadOnlyList<StudyRoom> FilteredRooms =>
+        (_rooms ?? [])
+            .Where(room => _selectedHub == "All" || string.Equals(room.HubId, _selectedHub, StringComparison.OrdinalIgnoreCase))
+            .Where(room => _selectedFloor == "All" || room.FloorNumber.ToString() == _selectedFloor)
+            .Where(room => _selectedStatus == "All" || string.Equals(room.Status.ToString(), _selectedStatus, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(room => room.RoomId)
+            .ToList();
+
+    private IReadOnlyList<StudyRoom> SearchResults =>
+        FilteredRooms
+            .Where(room =>
+                string.IsNullOrWhiteSpace(_searchQuery) ||
+                room.RoomId.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                room.HubId.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                room.FloorNumber.ToString().Contains(_searchQuery, StringComparison.OrdinalIgnoreCase))
+            .Take(2)
+            .ToList();
+
+    private string OverviewTimestamp =>
+        _rooms is null
+            ? "--"
+            : $"{_lastUpdated.ToLocalTime():dd/MM} at {_lastUpdated.ToLocalTime():HH:mm}";
+
+    private IReadOnlyList<ShortcutLink> ShortcutLinks =>
+    [
+        new("Availability overview", "/availability"),
+        new("Map view", "/map"),
+        new("Floor plan", "/floor-plan"),
+        new("News", "/#news"),
+        new("Events", "/#events"),
+        new("Search rooms", "/#search"),
+        new("All hubs", "/availability"),
+        new("Home", "/")
+    ];
+
+    private IReadOnlyList<NewsCard> NewsCards
+    {
+        get
+        {
+            if (_rooms is null || _rooms.Count == 0)
+            {
+                return [];
+            }
+
+            var recent = _rooms
+                .OrderByDescending(room => room.LastActivityTime)
+                .Take(2)
+                .ToList();
+
+            return
+            [
+                new(
+                    $"Hub {recent[0].HubId}",
+                    recent[0].LastActivityTime.ToLocalTime().ToString("MMMM dd"),
+                    $"{recent[0].RoomId} status update",
+                    $"The room is currently {recent[0].Status.ToString().ToLowerInvariant()} in the live feed."),
+                new(
+                    recent.Count > 1 ? $"Hub {recent[1].HubId}" : "VIA",
+                    recent.Count > 1 ? recent[1].LastActivityTime.ToLocalTime().ToString("MMMM dd") : _lastUpdated.ToLocalTime().ToString("MMMM dd"),
+                    recent.Count > 1 ? $"{recent[1].RoomId} status update" : "Room availability overview",
+                    recent.Count > 1
+                        ? $"The room is currently {recent[1].Status.ToString().ToLowerInvariant()} in the live feed."
+                        : "Live room status is available in the portal.")
+            ];
+        }
+    }
+
+    private IReadOnlyList<MoreCard> MoreCards =>
+    [
+        new("Availability overview", "See every tracked room grouped by hub and floor.", "/availability", "/images/more1.png"),
+        new("Map view", "Scan open and occupied rooms in a compact visual layout.", "/map", "/images/more2.png"),
+        new("Floor plan", "Inspect room markers directly on the building plans.", "/floor-plan", "/images/more3.png")
+    ];
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,6 +297,14 @@ else
     public async ValueTask DisposeAsync()
     {
         if (_hubConnection is not null)
+        {
             await _hubConnection.DisposeAsync();
+        }
     }
+
+    private sealed record ShortcutLink(string Label, string Href);
+
+    private sealed record NewsCard(string Source, string When, string Title, string Description);
+
+    private sealed record MoreCard(string Title, string Description, string Href, string ImagePath);
 }

@@ -1,12 +1,221 @@
 @inherits LayoutComponentBase
 
-<nav class="navbar">
-    <span class="navbar-brand">VIA Room Availability</span>
-    <a href="/" class="nav-link">Table View</a>
-    <a href="/map" class="nav-link">Map View</a>
-    <a href="/floor-plan" class="nav-link">Floor Plan</a>
-</nav>
+<header class="header">
+    <div class="container header-inner">
+        <NavLink href="/" Match="NavLinkMatch.All" class="logo" @onclick="CloseMenu">
+            <img src="/images/logo.gif" alt="MyVIA logo" />
+        </NavLink>
 
-<main class="container">
+        <nav class="nav desktop-nav" aria-label="Primary">
+            <a href="/#news" class="nav-link" @onclick="CloseMenu">News</a>
+            <a href="/#events" class="nav-link" @onclick="CloseMenu">Events</a>
+            <a href="/availability" class="nav-link" @onclick="CloseMenu">My programme</a>
+            <button type="button" class="nav-link menu-trigger" @onclick="ToggleMenu" aria-expanded="@_isMenuOpen">
+                Menu &#9776;
+            </button>
+        </nav>
+    </div>
+</header>
+
+<div id="overlay" class="@(_isMenuOpen ? "active" : string.Empty)" @onclick="CloseMenu"></div>
+
+<aside id="sideMenu" class="side-menu @(_isMenuOpen ? "active" : string.Empty)" aria-hidden="@(!_isMenuOpen)">
+    <div class="menu-header">
+        <NavLink href="/" Match="NavLinkMatch.All" class="logo" @onclick="CloseMenu">
+            <img src="/images/logo.gif" alt="MyVIA logo" />
+        </NavLink>
+        <button type="button" class="menu-close" @onclick="CloseMenu">x</button>
+    </div>
+
+    <input class="menu-search"
+           @bind="_menuSearch"
+           @bind:event="oninput"
+           placeholder="Try searching!" />
+
+    @foreach (var menuSection in _menuSections)
+    {
+        var visibleLinks = GetVisibleLinks(menuSection);
+        var showSection = SectionMatches(menuSection.Title) || visibleLinks.Count > 0;
+
+        if (!showSection)
+        {
+            continue;
+        }
+
+        <div class="menu-section @(IsSectionOpen(menuSection.Title) ? "active" : string.Empty)">
+            <button type="button" class="menu-title" @onclick="() => ToggleSection(menuSection.Title)">
+                <span>@menuSection.Title</span>
+                <span>@(IsSectionOpen(menuSection.Title) ? "-" : "+")</span>
+            </button>
+
+            @if (IsSectionOpen(menuSection.Title))
+            {
+                <div class="submenu">
+                    @foreach (var link in visibleLinks)
+                    {
+                        <a href="@link.Href" @onclick="CloseMenu">@link.Label</a>
+                    }
+                </div>
+            }
+        </div>
+    }
+</aside>
+
+<main class="page-shell">
     @Body
 </main>
+
+<nav class="mobile-nav" aria-label="Mobile">
+    <NavLink href="/" Match="NavLinkMatch.All" class="mobile-nav-item" ActiveClass="active" @onclick="CloseMenu">MyVIA</NavLink>
+    <a href="/#news" class="mobile-nav-item" @onclick="CloseMenu">News</a>
+    <a href="/#events" class="mobile-nav-item" @onclick="CloseMenu">Events</a>
+    <a href="/availability" class="mobile-nav-item" @onclick="CloseMenu">Programme</a>
+    <button type="button" class="mobile-nav-item" @onclick="ToggleMenu">Menu &#9776;</button>
+</nav>
+
+@code {
+    private bool _isMenuOpen;
+    private string _expandedSection = "Building information and services";
+    private string _menuSearch = string.Empty;
+
+    private readonly IReadOnlyList<MenuSection> _menuSections =
+    [
+        new(
+            "Books and literature",
+            [
+                new("Home", "/"),
+                new("Availability overview", "/availability"),
+                new("Search rooms", "/#search")
+            ]),
+        new(
+            "Building information and services",
+            [
+                new("Map view", "/map"),
+                new("Floor plan", "/floor-plan"),
+                new("Availability overview", "/availability")
+            ]),
+        new(
+            "Communities and student life",
+            [
+                new("Events", "/#events"),
+                new("Latest updates", "/#news"),
+                new("More from MyVIA", "/#more")
+            ]),
+        new(
+            "Exam and tests",
+            [
+                new("My programme", "/availability"),
+                new("Map view", "/map"),
+                new("Floor plan", "/floor-plan")
+            ]),
+        new(
+            "International opportunities",
+            [
+                new("Home", "/"),
+                new("Map view", "/map"),
+                new("Floor plan", "/floor-plan")
+            ]),
+        new(
+            "Internships",
+            [
+                new("Availability overview", "/availability"),
+                new("Search rooms", "/#search"),
+                new("Map view", "/map")
+            ]),
+        new(
+            "IT",
+            [
+                new("Open MyVIA home", "/"),
+                new("Availability overview", "/availability"),
+                new("Room map", "/map"),
+                new("Floor plan", "/floor-plan")
+            ]),
+        new(
+            "Rules and guidelines",
+            [
+                new("Availability guide", "/availability"),
+                new("Find a room", "/#search"),
+                new("More from MyVIA", "/#more")
+            ]),
+        new(
+            "Semester overview",
+            [
+                new("Home", "/"),
+                new("Events", "/#events"),
+                new("Latest updates", "/#news")
+            ]),
+        new(
+            "Study and career guidance",
+            [
+                new("Availability overview", "/availability"),
+                new("Search rooms", "/#search"),
+                new("Map view", "/map")
+            ]),
+        new(
+            "Study materials",
+            [
+                new("Home", "/"),
+                new("Availability overview", "/availability"),
+                new("Floor plan", "/floor-plan")
+            ]),
+        new(
+            "Study start",
+            [
+                new("Home", "/"),
+                new("Events", "/#events"),
+                new("Availability overview", "/availability")
+            ]),
+        new(
+            "Quality and assessment",
+            [
+                new("Latest updates", "/#news"),
+                new("My programme", "/availability"),
+                new("Floor plan", "/floor-plan")
+            ])
+    ];
+
+    private void ToggleMenu()
+    {
+        _isMenuOpen = !_isMenuOpen;
+    }
+
+    private void CloseMenu()
+    {
+        _isMenuOpen = false;
+    }
+
+    private void ToggleSection(string title)
+    {
+        _expandedSection = _expandedSection == title ? string.Empty : title;
+    }
+
+    private bool IsSectionOpen(string title)
+    {
+        if (!string.IsNullOrWhiteSpace(_menuSearch))
+        {
+            return SectionMatches(title) || GetVisibleLinks(_menuSections.First(section => section.Title == title)).Count > 0;
+        }
+
+        return _expandedSection == title;
+    }
+
+    private bool SectionMatches(string title) =>
+        string.IsNullOrWhiteSpace(_menuSearch) ||
+        title.Contains(_menuSearch, StringComparison.OrdinalIgnoreCase);
+
+    private IReadOnlyList<MenuLink> GetVisibleLinks(MenuSection section)
+    {
+        if (string.IsNullOrWhiteSpace(_menuSearch))
+        {
+            return section.Links;
+        }
+
+        return section.Links
+            .Where(link => link.Label.Contains(_menuSearch, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private sealed record MenuSection(string Title, IReadOnlyList<MenuLink> Links);
+
+    private sealed record MenuLink(string Label, string Href);
+}

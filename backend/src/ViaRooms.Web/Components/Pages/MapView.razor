@@ -5,46 +5,87 @@
 @inject IConfiguration Config
 @implements IAsyncDisposable
 
-<h2>Map View</h2>
-<p class="last-updated">Last updated: @_lastUpdated.ToLocalTime().ToString("HH:mm:ss")</p>
+<PageTitle>MyVIA | Map View</PageTitle>
 
-<div class="hub-tabs">
-    @foreach (var hub in new[] { "A", "B", "C" })
-    {
-        <button class="tab-btn @(hub == _selectedHub ? "active" : "")" @onclick="() => _selectedHub = hub">
-            Hub @hub
-        </button>
-    }
-</div>
-
-@if (_rooms is null)
-{
-    <p>Loading...</p>
-}
-else
-{
-    var hubRooms = _rooms.Where(r => r.HubId == _selectedHub).ToList();
-    @foreach (var floor in hubRooms.GroupBy(r => r.FloorNumber).OrderBy(g => g.Key))
-    {
-        <div class="floor-row">
-            <span class="floor-label">Floor @floor.Key</span>
-            <div class="room-grid">
-                @foreach (var room in floor.OrderBy(r => r.RoomId))
-                {
-                    var cssClass = room.Status == RoomStatus.Available ? "available" : "occupied";
-                    var label = room.RoomId.Split('.').Last();
-                    <div class="room-cell @cssClass" title="@room.RoomId">@label</div>
-                }
-            </div>
+<section class="page-intro">
+    <div class="container page-intro-inner">
+        <div>
+            <p class="eyebrow">my via | room map</p>
+            <h1>Map view for live room status.</h1>
+            <p>Switch hubs, scan floors, and spot open study spaces quickly.</p>
         </div>
-    }
-}
+        <p class="last-updated">Last updated: @(_rooms is null ? "--" : _lastUpdated.ToLocalTime().ToString("HH:mm:ss"))</p>
+    </div>
+</section>
+
+<section class="page-panel">
+    <div class="container">
+        <div class="hub-tabs">
+            @foreach (var hub in HubOptions)
+            {
+                <button class="tab-btn @(hub == _selectedHub ? "active" : string.Empty)" @onclick="() => _selectedHub = hub">
+                    Hub @hub
+                </button>
+            }
+        </div>
+
+        @if (_rooms is null)
+        {
+            <p class="section-empty">Loading map view...</p>
+        }
+        else
+        {
+            <div class="summary-grid compact-grid">
+                <article class="summary-card">
+                    <span>Rooms in hub</span>
+                    <strong>@SelectedHubRooms.Count</strong>
+                </article>
+                <article class="summary-card">
+                    <span>Available</span>
+                    <strong>@SelectedHubRooms.Count(room => room.Status == RoomStatus.Available)</strong>
+                </article>
+                <article class="summary-card">
+                    <span>Occupied</span>
+                    <strong>@SelectedHubRooms.Count(room => room.Status == RoomStatus.Occupied)</strong>
+                </article>
+            </div>
+
+            @foreach (var floor in SelectedHubRooms.GroupBy(room => room.FloorNumber).OrderBy(group => group.Key))
+            {
+                <div class="floor-row">
+                    <span class="floor-label">Floor @floor.Key</span>
+                    <div class="room-grid">
+                        @foreach (var room in floor.OrderBy(room => room.RoomId))
+                        {
+                            var cssClass = room.Status == RoomStatus.Available ? "available" : "occupied";
+                            var label = room.RoomId.Split('.').Last();
+                            <div class="room-cell @cssClass" title="@room.RoomId">@label</div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</section>
 
 @code {
     private List<StudyRoom>? _rooms;
     private DateTime _lastUpdated = DateTime.UtcNow;
     private string _selectedHub = "A";
     private HubConnection? _hubConnection;
+
+    private IReadOnlyList<string> HubOptions =>
+        (_rooms ?? [])
+            .Select(room => room.HubId)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(hub => hub)
+            .ToList();
+
+    private IReadOnlyList<StudyRoom> SelectedHubRooms =>
+        (_rooms ?? [])
+            .Where(room => room.HubId == _selectedHub)
+            .OrderBy(room => room.RoomId)
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -68,11 +109,18 @@ else
     {
         _rooms = await RoomService.GetAllRoomsAsync() ?? [];
         _lastUpdated = DateTime.UtcNow;
+
+        if (_rooms.Count > 0 && !_rooms.Any(room => room.HubId == _selectedHub))
+        {
+            _selectedHub = _rooms.Select(room => room.HubId).OrderBy(hub => hub).First();
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
         if (_hubConnection is not null)
+        {
             await _hubConnection.DisposeAsync();
+        }
     }
 }
