@@ -1,0 +1,133 @@
+@page "/availability"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.SignalR.Client
+@inject RoomApiService RoomService
+@inject IConfiguration Config
+@implements IAsyncDisposable
+
+<PageTitle>MyVIA | Availability</PageTitle>
+
+<section class="page-intro">
+    <div class="container page-intro-inner">
+        <div>
+            <p class="eyebrow">my via | availability overview</p>
+            <h1>Every tracked room, grouped for quick scanning.</h1>
+            <p>Use this page when you want the full room list with live status updates by hub and floor.</p>
+        </div>
+        <p class="last-updated">Last updated: @(_rooms is null ? "--" : _lastUpdated.ToLocalTime().ToString("HH:mm:ss"))</p>
+    </div>
+</section>
+
+@if (_rooms is null)
+{
+    <section class="page-panel">
+        <div class="container">
+            <p class="section-empty">Loading room availability...</p>
+        </div>
+    </section>
+}
+else
+{
+    <section class="page-panel">
+        <div class="container summary-grid">
+            <article class="summary-card">
+                <span>Total rooms</span>
+                <strong>@_rooms.Count</strong>
+            </article>
+            <article class="summary-card">
+                <span>Available now</span>
+                <strong>@_rooms.Count(room => room.Status == RoomStatus.Available)</strong>
+            </article>
+            <article class="summary-card">
+                <span>Occupied now</span>
+                <strong>@_rooms.Count(room => room.Status == RoomStatus.Occupied)</strong>
+            </article>
+        </div>
+    </section>
+
+    @foreach (var hub in _rooms.GroupBy(room => room.HubId).OrderBy(group => group.Key))
+    {
+        <section class="page-panel">
+            <div class="container">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">Hub @hub.Key</p>
+                        <h2>Availability table</h2>
+                        <p class="hub-availability-note">
+                            Available rooms: @hub.Count(room => room.Status == RoomStatus.Available) / @hub.Count()
+                        </p>
+                    </div>
+                    <p class="panel-note">@hub.Count() rooms tracked</p>
+                </div>
+
+                @foreach (var floor in hub.GroupBy(room => room.FloorNumber).OrderBy(group => group.Key))
+                {
+                    <div class="table-group">
+                        <h3 class="floor-heading">Floor @floor.Key</h3>
+                        <table class="room-table">
+                            <thead>
+                                <tr>
+                                    <th>Room</th>
+                                    <th>Status</th>
+                                    <th>Last activity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var room in floor.OrderBy(room => room.RoomId))
+                                {
+                                    <tr>
+                                        <td>@room.RoomId</td>
+                                        <td>
+                                            <span class="badge @(room.Status == RoomStatus.Available ? "badge-available" : "badge-occupied")">
+                                                @room.Status
+                                            </span>
+                                        </td>
+                                        <td>@room.LastActivityTime.ToLocalTime().ToString("HH:mm:ss")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+}
+
+@code {
+    private List<StudyRoom>? _rooms;
+    private DateTime _lastUpdated = DateTime.UtcNow;
+    private HubConnection? _hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoomsAsync();
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(Config["ApiBaseUrl"] + "/roomhub")
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On("RoomUpdated", async () =>
+        {
+            await LoadRoomsAsync();
+            await InvokeAsync(StateHasChanged);
+        });
+
+        await _hubConnection.StartAsync();
+    }
+
+    private async Task LoadRoomsAsync()
+    {
+        _rooms = await RoomService.GetAllRoomsAsync() ?? [];
+        _lastUpdated = DateTime.UtcNow;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+}
