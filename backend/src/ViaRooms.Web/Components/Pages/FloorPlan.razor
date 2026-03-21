@@ -101,7 +101,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var jsonPath = System.IO.Path.Combine(Env.WebRootPath, "floor_plan_data.json");
+        var jsonPath = System.IO.Path.Combine(Env.WebRootPath, "floor_plan_PERCENTAGE.json");
         if (System.IO.File.Exists(jsonPath))
         {
             var json = await System.IO.File.ReadAllTextAsync(jsonPath);
