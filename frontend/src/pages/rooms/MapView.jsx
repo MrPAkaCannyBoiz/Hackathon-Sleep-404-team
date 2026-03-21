@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useRooms } from '../../hooks/useRooms'
+import { useOutletContext } from 'react-router-dom'
 
 const groupBy = (arr, key) =>
   arr.reduce((acc, item) => {
@@ -8,7 +8,7 @@ const groupBy = (arr, key) =>
   }, {})
 
 export default function MapView() {
-  const { rooms, lastUpdated, error } = useRooms()
+  const { rooms, lastUpdated, error } = useOutletContext()
   const [selectedHub, setSelectedHub] = useState('A')
 
   if (error) return <p style={{ color: 'red' }}>Error loading rooms: {error}</p>
@@ -17,10 +17,14 @@ export default function MapView() {
   const hubRooms = rooms.filter(r => r.hubId === selectedHub)
   const byFloor = groupBy(hubRooms, 'floorNumber')
 
+  const hubAvailable = hubRooms.filter(r => r.status === 0 || r.status === 'Available').length
+
   return (
     <>
-      <h2>Map View</h2>
-      <p className="last-updated">Last updated: {lastUpdated.toLocaleTimeString()}</p>
+      <div className="section-heading">
+        <h2>Map View</h2>
+        <span className="last-updated">Updated {lastUpdated.toLocaleTimeString()}</span>
+      </div>
 
       <div className="hub-tabs">
         {['A', 'B', 'C'].map(hub => (
@@ -34,30 +38,37 @@ export default function MapView() {
         ))}
       </div>
 
-      {Object.keys(byFloor)
-        .sort((a, b) => Number(a) - Number(b))
-        .map(floor => (
-          <div key={floor} className="floor-row">
-            <span className="floor-label">Floor {floor}</span>
-            <div className="room-grid">
-              {[...byFloor[floor]]
-                .sort((a, b) => a.roomId.localeCompare(b.roomId))
-                .map(room => {
-                  const label = room.roomId.split('.').at(-1)
-                  const isAvailable = room.status === 0 || room.status === 'Available'
-                  return (
-                    <div
-                      key={room.id}
-                      className={`room-cell ${isAvailable ? 'available' : 'occupied'}`}
-                      title={room.roomId}
-                    >
-                      {label}
-                    </div>
-                  )
-                })}
+      <p className="hub-availability-note">
+        Hub {selectedHub}: <strong>{hubAvailable}</strong> of{' '}
+        <strong>{hubRooms.length}</strong> rooms available
+      </p>
+
+      <div className="compact-grid">
+        {Object.keys(byFloor)
+          .sort((a, b) => Number(a) - Number(b))
+          .map(floor => (
+            <div key={floor} className="floor-row">
+              <span className="floor-label">Floor {floor}</span>
+              <div className="room-grid">
+                {[...byFloor[floor]]
+                  .sort((a, b) => a.roomId.localeCompare(b.roomId))
+                  .map(room => {
+                    const label = room.roomId.split('.').at(-1)
+                    const isAvailable = room.status === 0 || room.status === 'Available'
+                    return (
+                      <div
+                        key={room.id}
+                        className={`room-cell ${isAvailable ? 'available' : 'occupied'}`}
+                        title={room.roomId}
+                      >
+                        {label}
+                      </div>
+                    )
+                  })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+      </div>
     </>
   )
 }

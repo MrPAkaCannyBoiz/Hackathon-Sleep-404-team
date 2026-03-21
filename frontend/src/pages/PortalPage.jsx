@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import '../portal.css'
+import '../rooms.css'
 
 const menuSections = [
   {
@@ -200,15 +200,15 @@ export default function PortalPage() {
               'Long term illness', 'Parental leave', 'Withdrawing', 'SPS',
               'Library', 'Internship Portal',
             ].map(s => (
-              <div key={s}>{s}</div>
+              <a key={s} href="#">{s}</a>
             ))}
             {/* Room Availability CTA shortcut */}
-            <div
-              onClick={() => navigate('/rooms/table')}
-              style={{ cursor: 'pointer', background: '#1e3a5f', color: 'white', border: 'none', fontWeight: 600 }}
+            <a
+              href="/rooms/table"
+              onClick={e => { e.preventDefault(); navigate('/rooms/table') }}
             >
               Room Availability
-            </div>
+            </a>
           </div>
         </div>
       </section>

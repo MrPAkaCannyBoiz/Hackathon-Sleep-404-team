@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useRooms } from '../../hooks/useRooms'
+import { useOutletContext } from 'react-router-dom'
 
 export default function FloorPlanView() {
-  const { rooms, lastUpdated, error } = useRooms()
+  const { rooms, lastUpdated, error } = useOutletContext()
   const [floorData, setFloorData] = useState(null)
 
   useEffect(() => {
-    fetch('/floor_plan_data.json')
+    fetch('/floor_plan_PERCENTAGE.json')
       .then(r => r.json())
       .then(setFloorData)
       .catch(console.error)
@@ -17,17 +17,34 @@ export default function FloorPlanView() {
 
   return (
     <>
-      <h2>Floor Plan</h2>
-      <p className="last-updated">Last updated: {lastUpdated.toLocaleTimeString()}</p>
+      <div className="section-heading">
+        <h2>Floor Plan</h2>
+        <span className="last-updated">Updated {lastUpdated.toLocaleTimeString()}</span>
+      </div>
+
+      <div className="legend">
+        <span className="legend-item">
+          <span className="legend-dot available" />
+          Available
+        </span>
+        <span className="legend-item">
+          <span className="legend-dot occupied" />
+          Occupied
+        </span>
+        <span className="legend-item">
+          <span className="legend-dot unknown" />
+          Unknown
+        </span>
+      </div>
 
       {floorData.map(floor => (
-        <section key={floor.id} style={{ marginBottom: 40 }}>
-          <h3>{floor.name}</h3>
-          <div style={{ position: 'relative', display: 'inline-block' }}>
+        <section key={floor.id} className="floor-plan-section">
+          <h3 className="floor-heading">{floor.name}</h3>
+          <div className="floor-plan-container" style={{ width: '100%' }}>
             <img
               src={floor.src}
               alt={floor.name}
-              style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
+              className="floor-plan-image"
             />
             {floor.rooms.map(room => {
               const liveRoom = rooms.find(
@@ -38,48 +55,18 @@ export default function FloorPlanView() {
                   ? 'available'
                   : 'occupied'
                 : 'unknown'
-              const dotColor =
-                status === 'available' ? '#22c55e' : status === 'occupied' ? '#ef4444' : '#94a3b8'
 
               return (
                 <div
                   key={room.id}
-                  style={{
-                    position: 'absolute',
-                    left: room.x,
-                    top: room.y,
-                    transform: 'translate(-50%, -50%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    pointerEvents: 'none',
-                  }}
+                  className="room-dot"
+                  style={{ left: `${room.x}%`, top: `${room.y}%` }}
                 >
                   <div
+                    className={`room-dot__marker ${status}`}
                     title={`${room.name} - ${status}`}
-                    style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: '50%',
-                      backgroundColor: dotColor,
-                      border: '2px solid white',
-                      boxShadow: '0 0 4px rgba(0,0,0,0.5)',
-                      pointerEvents: 'auto',
-                      cursor: 'default',
-                    }}
                   />
-                  <span
-                    style={{
-                      background: 'rgba(255,255,255,0.85)',
-                      padding: '1px 4px',
-                      borderRadius: 3,
-                      fontWeight: 700,
-                      fontSize: 10,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {room.name}
-                  </span>
+                  <span className="room-dot__label">{room.name}</span>
                 </div>
               )
             })}
