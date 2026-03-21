@@ -18,25 +18,46 @@
 else
 {
     @foreach (var floor in _floorData)
-    {
-        <h3>@floor.Name</h3>
-        <div class="floor-plan-container" style="position: relative; display: inline-block;">
-            <img src="@floor.Src" alt="@floor.Name" style="max-width: 100%; height: auto;" />
+{
+    <h3>@floor.Name</h3>
+    @* Added line-height: 0 to ensure the container is exactly the image height *@
+    <div class="floor-plan-container" style="position: relative; display: inline-block; line-height: 0;">
+        
+        <img src="@floor.Src" alt="@floor.Name" style="max-width: 100%; height: auto; display: block;" />
+        
+        @foreach (var room in floor.Rooms)
+        {
+            var liveRoom = _rooms?.FirstOrDefault(r => string.Equals(r.RoomId, room.Name, StringComparison.OrdinalIgnoreCase));
+            var statusCss = liveRoom?.Status.ToString().ToLower() ?? "unknown";
             
-            @foreach (var room in floor.Rooms)
-            {
-                var liveRoom = _rooms.FirstOrDefault(r => string.Equals(r.RoomId, room.Name, StringComparison.OrdinalIgnoreCase));
-                var statusCss = liveRoom?.Status.ToString().ToLower() ?? "unknown";
-                var dotColor = statusCss == "available" ? "lightgreen" : statusCss == "occupied" ? "red" : "gray";
+            // Logic for colors based on your API status
+            var dotColor = statusCss == "available" ? "lightgreen" : statusCss == "occupied" ? "#ff4d4d" : "gray";
 
-                <div class="room-dot" 
-                     style="position: absolute; left: @(room.X)px; top: @(room.Y)px; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 4px;">
-                     <div style="width: 16px; height: 16px; border-radius: 50%; background-color: @dotColor; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);" title="@room.Name - @statusCss"></div>
-                     <span style="background: rgba(255,255,255,0.8); padding: 2px 4px; border-radius: 4px; font-weight: bold; font-size: 12px;">@room.Name</span>
+            @* CHANGE: We now use % instead of px *@
+            <div class="room-dot" 
+                 style="position: absolute; 
+                        left: @(room.X)%; 
+                        top: @(room.Y)%; 
+                        transform: translate(-50%, -50%); 
+                        display: flex; 
+                        align-items: center; 
+                        gap: 6px; 
+                        pointer-events: none;
+                        line-height: normal; @* Reset line height for the text *@ ">
+                
+                @* The Dot *@
+                <div style="width: 14px; height: 14px; border-radius: 50%; background-color: @dotColor; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);" 
+                     title="@room.Name - @statusCss">
                 </div>
-            }
-        </div>
-    }
+                
+                @* The Label *@
+                <span style="background: rgba(255,255,255,0.85); padding: 1px 4px; border-radius: 4px; font-weight: bold; font-size: 11px; color: black; white-space: nowrap;">
+                    @room.Name
+                </span>
+            </div>
+        }
+    </div>
+}
 }
 
 @code {
@@ -65,7 +86,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var jsonPath = System.IO.Path.Combine(Env.WebRootPath, "floor_plan_data.json");
+        var jsonPath = System.IO.Path.Combine(Env.WebRootPath, "floor_plan_PERCENTAGE.json");
         if (System.IO.File.Exists(jsonPath))
         {
             var json = await System.IO.File.ReadAllTextAsync(jsonPath);
