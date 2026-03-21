@@ -1,0 +1,179 @@
+[
+  {
+    "id": 1,
+    "name": "Floor 3",
+    "src": "/floor3.jpg",
+    "referenceWidth": 1000,
+    "referenceHeight": 1105,
+    "rooms": [
+      {
+        "id": 1774046676544,
+        "name": "C03.16",
+        "type": "Lab",
+        "status": "vacant",
+        "x": 361,
+        "y": 392
+      },
+      {
+        "id": 1774046702870,
+        "name": "C03.15",
+        "type": "Lab",
+        "status": "vacant",
+        "x": 385,
+        "y": 301
+      },
+      {
+        "id": 1774046727974,
+        "name": "C03.14",
+        "type": "Lab",
+        "status": "vacant",
+        "x": 383,
+        "y": 259
+      },
+      {
+        "id": 1774046746791,
+        "name": "C03.13",
+        "type": "Classroom",
+        "status": "vacant",
+        "x": 468,
+        "y": 249
+      },
+      {
+        "id": 1774046753115,
+        "name": "C03.12",
+        "type": "Classroom",
+        "status": "vacant",
+        "x": 533,
+        "y": 207
+      },
+      {
+        "id": 1774046761395,
+        "name": "C03.11",
+        "type": "Classroom",
+        "status": "vacant",
+        "x": 608,
+        "y": 186
+      },
+      {
+        "id": 1774046782164,
+        "name": "C03.20",
+        "type": "Group Room",
+        "status": "vacant",
+        "x": 472,
+        "y": 432
+      },
+      {
+        "id": 1774046792994,
+        "name": "C03.21",
+        "type": "Group Room",
+        "status": "vacant",
+        "x": 468,
+        "y": 485
+      },
+      {
+        "id": 1774046803907,
+        "name": "C03.22",
+        "type": "Classroom",
+        "status": "vacant",
+        "x": 577,
+        "y": 460
+      },
+      {
+        "id": 1774046821271,
+        "name": "C03.23",
+        "type": "Classroom",
+        "status": "vacant",
+        "x": 645,
+        "y": 479
+      },
+      {
+        "id": 1774046844506,
+        "name": "C03.05",
+        "type": "Work Room",
+        "status": "vacant",
+        "x": 601,
+        "y": 247
+      },
+      {
+        "id": 1774046867788,
+        "name": "C03.06",
+        "type": "Group Room",
+        "status": "vacant",
+        "x": 605,
+        "y": 277
+      },
+      {
+        "id": 1774046884993,
+        "name": "C03.07",
+        "type": "Group Room",
+        "status": "vacant",
+        "x": 620,
+        "y": 311
+      },
+      {
+        "id": 1774046900578,
+        "name": "C03.08a",
+        "type": "Classroom",
+        "status": "vacant",
+        "x": 638,
+        "y": 324
+      },
+      {
+        "id": 1774046914050,
+        "name": "C03.08b",
+        "type": "Group Room",
+        "status": "vacant",
+        "x": 656,
+        "y": 352
+      },
+      {
+        "id": 1774046969042,
+        "name": "C03.09",
+        "type": "Group Room",
+        "status": "vacant",
+        "x": 664,
+        "y": 378
+      },
+      {
+        "id": 1774046989353,
+        "name": "C03.10",
+        "type": "Group Room",
+        "status": "vacant",
+        "x": 687,
+        "y": 411
+      },
+      {
+        "id": 1774047019257,
+        "name": "C03.04",
+        "type": "Work Room",
+        "status": "vacant",
+        "x": 637,
+        "y": 228
+      },
+      {
+        "id": 1774047036125,
+        "name": "C03.01",
+        "type": "Classroom",
+        "status": "vacant",
+        "x": 806,
+        "y": 309
+      },
+      {
+        "id": 1774047069749,
+        "name": "C03.02",
+        "type": "Classroom",
+        "status": "vacant",
+        "x": 782,
+        "y": 233
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Floor 2",
+    "src": "/floor2.jpg",
+    "referenceWidth": 1000,
+    "referenceHeight": 1057,
+    "rooms": []
+  }
+]

@@ -1,0 +1,212 @@
+@page "/floor-plan"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.SignalR.Client
+@using ViaRooms.Shared.Models
+@using ViaRooms.Web.Models
+@inject RoomApiService RoomService
+@inject FloorPlanDataService FloorPlanService
+@inject IConfiguration Config
+@implements IAsyncDisposable
+
+<h2>Floor Plan</h2>
+<p class="last-updated">Last updated: @_lastUpdated.ToLocalTime().ToString("HH:mm:ss")</p>
+
+@if (!string.IsNullOrWhiteSpace(_loadError))
+{
+    <p class="floor-plan-message floor-plan-error">@_loadError</p>
+}
+else if (_floorPlans is null || _rooms is null)
+{
+    <p>Loading...</p>
+}
+else if (_floorPlans.Count == 0)
+{
+    <p class="floor-plan-message">No floor plans are configured yet.</p>
+}
+else
+{
+    var selectedPlan = GetSelectedPlan();
+
+    <div class="hub-tabs">
+        @foreach (var plan in _floorPlans)
+        {
+            var hasMappedRooms = plan.Rooms.Count > 0;
+            <button type="button"
+                    class="tab-btn @(plan.Id == selectedPlan?.Id ? "active" : "")"
+                    disabled="@(!hasMappedRooms)"
+                    @onclick="() => SelectPlan(plan.Id)">
+                @plan.Name
+            </button>
+        }
+    </div>
+
+    @if (selectedPlan is null)
+    {
+        <p class="floor-plan-message">No floor plan is selected.</p>
+    }
+    else
+    {
+        var markers = GetMarkers(selectedPlan);
+        var fallbackCount = markers.Count(marker => !marker.HasLiveStatus);
+
+        <div class="floor-plan-summary">
+            <div class="floor-plan-legend">
+                <span class="legend-item">
+                    <span class="legend-dot legend-available"></span> Available
+                </span>
+                <span class="legend-item">
+                    <span class="legend-dot legend-occupied"></span> Occupied
+                </span>
+            </div>
+            <span class="floor-plan-count">@markers.Count mapped rooms</span>
+        </div>
+
+        @if (fallbackCount > 0)
+        {
+            <p class="floor-plan-message">
+                @fallbackCount room(s) are missing from the API right now, so those markers are using the fallback status from the mapper export.
+            </p>
+        }
+
+        <p class="floor-plan-hint">The floor plan now scales to the available width, and the saved mapper coordinates scale with it.</p>
+
+        <div class="floor-plan-scroll">
+            <div class="floor-plan-canvas" style="@GetCanvasStyle(selectedPlan)">
+                <img class="floor-plan-image" src="@selectedPlan.Src" alt="@($"{selectedPlan.Name} floor plan")" />
+
+                @foreach (var marker in markers)
+                {
+                    <div class="floor-marker @(marker.Status == RoomStatus.Available ? "is-available" : "is-occupied")"
+                         style="@GetMarkerPosition(marker, selectedPlan)"
+                         title="@GetMarkerTitle(marker)">
+                        <span class="floor-marker-dot"></span>
+                        <span class="floor-marker-label">@marker.RoomId</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<StudyRoom>? _rooms;
+    private Dictionary<string, StudyRoom> _roomsById = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<FloorPlanDefinition>? _floorPlans;
+    private int? _selectedPlanId;
+    private string? _loadError;
+    private DateTime _lastUpdated = DateTime.UtcNow;
+    private HubConnection? _hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFloorPlansAsync();
+        await LoadRoomsAsync();
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(Config["ApiBaseUrl"] + "/roomhub")
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On("RoomUpdated", async () =>
+        {
+            await LoadRoomsAsync();
+            await InvokeAsync(StateHasChanged);
+        });
+
+        await _hubConnection.StartAsync();
+    }
+
+    private async Task LoadFloorPlansAsync()
+    {
+        try
+        {
+            _floorPlans = await FloorPlanService.GetFloorPlansAsync();
+            _selectedPlanId = _floorPlans.FirstOrDefault(plan => plan.Rooms.Count > 0)?.Id
+                ?? _floorPlans.FirstOrDefault()?.Id;
+        }
+        catch
+        {
+            _loadError = "Could not load the floor plan data file.";
+            _floorPlans = [];
+        }
+    }
+
+    private async Task LoadRoomsAsync()
+    {
+        _rooms = await RoomService.GetAllRoomsAsync() ?? [];
+        _roomsById = _rooms
+            .GroupBy(room => room.RoomId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.OrderByDescending(room => room.LastActivityTime).First(), StringComparer.OrdinalIgnoreCase);
+        _lastUpdated = DateTime.UtcNow;
+    }
+
+    private FloorPlanDefinition? GetSelectedPlan() =>
+        _floorPlans?.FirstOrDefault(plan => plan.Id == _selectedPlanId) ?? _floorPlans?.FirstOrDefault();
+
+    private void SelectPlan(int planId) => _selectedPlanId = planId;
+
+    private List<FloorPlanMarker> GetMarkers(FloorPlanDefinition plan) =>
+        plan.Rooms
+            .OrderBy(room => room.Name)
+            .Select(room =>
+            {
+                var hasLiveStatus = _roomsById.TryGetValue(room.Name, out var liveRoom);
+                return new FloorPlanMarker(
+                    room.Name,
+                    room.Type,
+                    room.X,
+                    room.Y,
+                    hasLiveStatus ? liveRoom!.Status : ParseMappedStatus(room.Status),
+                    hasLiveStatus,
+                    liveRoom?.LastActivityTime);
+            })
+            .ToList();
+
+    private static RoomStatus ParseMappedStatus(string? status) =>
+        string.Equals(status, "occupied", StringComparison.OrdinalIgnoreCase)
+            ? RoomStatus.Occupied
+            : RoomStatus.Available;
+
+    private static string GetMarkerPosition(FloorPlanMarker marker, FloorPlanDefinition plan)
+    {
+        var width = plan.ReferenceWidth ?? 1000;
+        var height = plan.ReferenceHeight ?? 1105;
+        var left = marker.X / width * 100;
+        var top = marker.Y / height * 100;
+
+        return $"left: {left.ToString("0.####", global::System.Globalization.CultureInfo.InvariantCulture)}%; top: {top.ToString("0.####", global::System.Globalization.CultureInfo.InvariantCulture)}%;";
+    }
+
+    private static string GetCanvasStyle(FloorPlanDefinition plan)
+    {
+        var width = plan.ReferenceWidth ?? 1000;
+        return $"max-width: {width}px;";
+    }
+
+    private static string GetMarkerTitle(FloorPlanMarker marker)
+    {
+        var statusText = marker.Status == RoomStatus.Available ? "Available" : "Occupied";
+        var lastActivityText = marker.LastActivityTime is DateTime timestamp
+            ? $", last activity {timestamp.ToLocalTime():HH:mm:ss}"
+            : ", using mapper fallback status";
+
+        return $"{marker.RoomId} ({marker.Type}) - {statusText}{lastActivityText}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+
+    private sealed record FloorPlanMarker(
+        string RoomId,
+        string Type,
+        double X,
+        double Y,
+        RoomStatus Status,
+        bool HasLiveStatus,
+        DateTime? LastActivityTime);
+}

@@ -5,6 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient<RoomApiService>(c =>
     c.BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"]!));
+builder.Services.AddSingleton<FloorPlanDataService>();
 
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 
