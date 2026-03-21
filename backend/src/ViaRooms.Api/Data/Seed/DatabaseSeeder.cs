@@ -35,7 +35,7 @@ public static class DatabaseSeeder
         {
             foreach (var floor in floors)
             {
-                for (var room = 1; room <= 12; room++)
+                for (var room = 1; room <= 20; room++)
                 {
                     rooms.Add(new StudyRoom
                     {

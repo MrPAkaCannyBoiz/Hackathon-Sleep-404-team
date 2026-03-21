@@ -1,0 +1,70 @@
+import { useRooms } from '../../hooks/useRooms'
+
+const groupBy = (arr, key) =>
+  arr.reduce((acc, item) => {
+    ;(acc[item[key]] ??= []).push(item)
+    return acc
+  }, {})
+
+export default function TableView() {
+  const { rooms, lastUpdated, error } = useRooms()
+
+  if (error) return <p style={{ color: 'red' }}>Error loading rooms: {error}</p>
+  if (rooms === null) return <p>Loading...</p>
+
+  const byHub = groupBy(rooms, 'hubId')
+
+  return (
+    <>
+      <h2>Room Availability</h2>
+      <p className="last-updated">Last updated: {lastUpdated.toLocaleTimeString()}</p>
+      {Object.keys(byHub).sort().map(hubId => {
+        const byFloor = groupBy(byHub[hubId], 'floorNumber')
+        return (
+          <section key={hubId}>
+            <h3>Hub {hubId}</h3>
+            {Object.keys(byFloor)
+              .sort((a, b) => Number(a) - Number(b))
+              .map(floor => (
+                <div key={floor}>
+                  <h4 className="floor-heading">Floor {floor}</h4>
+                  <table className="room-table">
+                    <thead>
+                      <tr>
+                        <th>Room</th>
+                        <th>Status</th>
+                        <th>Last Activity</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...byFloor[floor]]
+                        .sort((a, b) => a.roomId.localeCompare(b.roomId))
+                        .map(room => (
+                          <tr key={room.id}>
+                            <td>{room.roomId}</td>
+                            <td>
+                              <span
+                                className={`badge ${
+                                  room.status === 0 || room.status === 'Available'
+                                    ? 'badge-available'
+                                    : 'badge-occupied'
+                                }`}
+                              >
+                                {room.status === 0 || room.status === 'Available'
+                                  ? 'Available'
+                                  : 'Occupied'}
+                              </span>
+                            </td>
+                            <td>{new Date(room.lastActivityTime).toLocaleTimeString()}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+          </section>
+        )
+      })}
+    </>
+  )
+}

@@ -2,78 +2,63 @@
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.SignalR.Client
 @using System.Text.Json
+@using Microsoft.AspNetCore.Hosting
 @inject RoomApiService RoomService
 @inject IConfiguration Config
 @inject IWebHostEnvironment Env
 @implements IAsyncDisposable
 
-<PageTitle>MyVIA | Floor Plan</PageTitle>
+<h2>Floor Plan</h2>
+<p class="last-updated">Last updated: @_lastUpdated.ToLocalTime().ToString("HH:mm:ss")</p>
 
-<section class="page-intro">
-    <div class="container page-intro-inner">
-        <div>
-            <p class="eyebrow">my via | floor plan</p>
-            <h1>Live room markers on the building plans.</h1>
-            <p>Use the floor plans when you need exact room placement alongside availability.</p>
-        </div>
-        <p class="last-updated">Last updated: @(_rooms is null ? "--" : _lastUpdated.ToLocalTime().ToString("HH:mm:ss"))</p>
-    </div>
-</section>
-
-<section class="page-panel">
-    <div class="container">
-        <div class="legend">
-            <div class="legend-item">
-                <span class="legend-dot available"></span>
-                <span>Available</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-dot occupied"></span>
-                <span>Occupied</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-dot unknown"></span>
-                <span>Classroom</span>
-            </div>
-        </div>
-
-        @if (_floorData is null || _rooms is null)
+@if (_floorData is null || _rooms is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    @foreach (var floor in _floorData)
+{
+    <h3>@floor.Name</h3>
+    @* Added line-height: 0 to ensure the container is exactly the image height *@
+    <div class="floor-plan-container" style="position: relative; display: inline-block; line-height: 0;">
+        
+        <img src="@floor.Src" alt="@floor.Name" style="max-width: 100%; height: auto; display: block;" />
+        
+        @foreach (var room in floor.Rooms)
         {
-            <p class="section-empty">Loading floor plans...</p>
-        }
-        else
-        {
-            @foreach (var floor in _floorData)
-            {
-                <div class="floor-plan-section">
-                    <div class="panel-heading">
-                        <div>
-                            <p class="eyebrow">Interactive floor</p>
-                            <h2>@floor.Name</h2>
-                        </div>
-                        <p class="panel-note">@floor.Rooms.Count rooms shown</p>
-                    </div>
+            var liveRoom = _rooms?.FirstOrDefault(r => string.Equals(r.RoomId, room.Name, StringComparison.OrdinalIgnoreCase));
+            var statusCss = liveRoom?.Status.ToString().ToLower() ?? "unknown";
+            
+            // Logic for colors based on your API status
+            var dotColor = statusCss == "available" ? "lightgreen" : statusCss == "occupied" ? "#ff4d4d" : "gray";
 
-                    <div class="floor-plan-container">
-                        <img class="floor-plan-image" src="@floor.Src" alt="@floor.Name" />
-
-                        @foreach (var room in floor.Rooms)
-                        {
-                            var liveRoom = _rooms.FirstOrDefault(item => string.Equals(item.RoomId, room.Name, StringComparison.OrdinalIgnoreCase));
-                            var statusCss = GetStatusCss(liveRoom?.Status);
-                            var title = $"{room.Name} - {statusCss}";
-
-                            <div class="room-dot" style="left: @(room.X)px; top: @(room.Y)px;">
-                                <div class="room-dot__marker @statusCss" title="@title"></div>
-                                <span class="room-dot__label">@room.Name</span>
-                            </div>
-                        }
-                    </div>
+            @* CHANGE: We now use % instead of px *@
+            <div class="room-dot" 
+                 style="position: absolute; 
+                        left: @(room.X)%; 
+                        top: @(room.Y)%; 
+                        transform: translate(-50%, -50%); 
+                        display: flex; 
+                        align-items: center; 
+                        gap: 6px; 
+                        pointer-events: none;
+                        line-height: normal; ">
+                
+                @* The Dot *@
+                <div style="width: 14px; height: 14px; border-radius: 50%; background-color: @dotColor; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);" 
+                     title="@room.Name - @statusCss">
                 </div>
-            }
+                
+                @* The Label *@
+                <span style="background: rgba(255,255,255,0.85); padding: 1px 4px; border-radius: 4px; font-weight: bold; font-size: 11px; color: black; white-space: nowrap;">
+                    @room.Name
+                </span>
+            </div>
         }
     </div>
-</section>
+}
+}
 
 @code {
     private List<StudyRoom>? _rooms;
@@ -84,9 +69,9 @@
     public class RoomData
     {
         public long Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Type { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
+        public string Name { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string Status { get; set; } = "";
         public double X { get; set; }
         public double Y { get; set; }
     }
@@ -94,9 +79,9 @@
     public class FloorPlanData
     {
         public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Src { get; set; } = string.Empty;
-        public List<RoomData> Rooms { get; set; } = [];
+        public string Name { get; set; } = "";
+        public string Src { get; set; } = "";
+        public List<RoomData> Rooms { get; set; } = new();
     }
 
     protected override async Task OnInitializedAsync()
@@ -130,18 +115,9 @@
         _lastUpdated = DateTime.UtcNow;
     }
 
-    private static string GetStatusCss(RoomStatus? status) => status switch
-    {
-        RoomStatus.Available => "available",
-        RoomStatus.Occupied => "occupied",
-        _ => "unknown"
-    };
-
     public async ValueTask DisposeAsync()
     {
         if (_hubConnection is not null)
-        {
             await _hubConnection.DisposeAsync();
-        }
     }
 }
