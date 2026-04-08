@@ -1,0 +1,49 @@
+{
+  "name": "ViaRooms",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "10"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropics.claude-code",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "platformio.platformio-ide"
+      ],
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "[csharp]": {
+          "editor.defaultFormatter": "ms-dotnettools.csharp"
+        },
+        "[c]": {
+          "editor.defaultFormatter": "ms-vscode.cpptools"
+        },
+        "[cpp]": {
+          "editor.defaultFormatter": "ms-vscode.cpptools"
+        },
+        "C_Cpp.default.compilerPath": "/usr/bin/arm-none-eabi-gcc",
+        "dotnet.defaultSolution": "backend/ViaRooms.slnx"
+      }
+    }
+  },
+  "mounts": [
+    "source=via-rooms-npm-${devcontainerId},target=${containerWorkspaceFolder}/frontend/node_modules,type=volume",
+    "source=via-rooms-dotnet-${devcontainerId},target=/home/vscode/.nuget,type=volume"
+  ],
+  "postCreateCommand": "uv run /opt/post_install.py && cd frontend && npm ci",
+  "runArgs": ["--cap-add=NET_ADMIN", "--privileged"],
+  "remoteUser": "vscode"
+}

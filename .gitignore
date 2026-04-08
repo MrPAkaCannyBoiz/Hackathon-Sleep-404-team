@@ -46,6 +46,7 @@ obj/
 # private files (prompts, API keys, etc.)
 *.env
 /prompts/
+.prompts/
 
 # local build verification folders
 .artifacts/
